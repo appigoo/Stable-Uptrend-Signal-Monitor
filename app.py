@@ -156,6 +156,35 @@ hr { border-color: #e8e4db !important; margin: 0.75rem 0 !important; }
 
 
 # ─────────────────────────────────────────────
+# TRADING SESSION DETECTION  (ET-based)
+# ─────────────────────────────────────────────
+ET = ZoneInfo("America/New_York")
+
+SESSION_CONFIG = {
+    "overnight":  {"emoji": "🌙", "label": "隔夜 Overnight",   "color": "#534ab7", "bg": "#eeedfe", "border": "#afa9ec", "warn": True,  "tfs": ["1m","5m"]},
+    "premarket":  {"emoji": "🌅", "label": "盤前 Pre-Market",  "color": "#854f0b", "bg": "#faeeda", "border": "#fac775", "warn": True,  "tfs": ["1m","5m"]},
+    "regular":    {"emoji": "📈", "label": "盤中 Regular",     "color": "#3b6d11", "bg": "#eaf3de", "border": "#c0dd97", "warn": False, "tfs": ["1m","5m","15m","1h","1d"]},
+    "afterhours": {"emoji": "🌆", "label": "盤後 After-Hours", "color": "#185fa5", "bg": "#e6f1fb", "border": "#85b7eb", "warn": True,  "tfs": ["1m","5m"]},
+}
+
+def get_session(dt_et: datetime) -> str:
+    h = dt_et.hour + dt_et.minute / 60
+    if   0   <= h <  4:    return "overnight"
+    elif 4   <= h <  9.5:  return "premarket"
+    elif 9.5 <= h < 16:    return "regular"
+    elif 16  <= h < 20:    return "afterhours"
+    else:                  return "overnight"  # 20:00–24:00 → next overnight
+
+def get_allowed_tfs(session: str, user_tfs: list) -> list:
+    """Non-regular hours: restrict to 1m/5m only."""
+    if session == "regular":
+        return user_tfs
+    allowed = SESSION_CONFIG[session]["tfs"]
+    filtered = [tf for tf in user_tfs if tf in allowed]
+    return filtered if filtered else ["5m"]
+
+
+# ─────────────────────────────────────────────
 # SESSION STATE
 # ─────────────────────────────────────────────
 for k, v in {"signal_log": [], "notified": {}, "signals": []}.items():
@@ -212,8 +241,12 @@ def build_telegram_message(sig):
         for i in range(5) if sig["enabled"][i]
     )
     bar = "🟢" * sig["score"] + "⚫" * (sig["max_score"] - sig["score"])
+    sess  = sig.get("session", "regular")
+    scfg  = SESSION_CONFIG[sess]
+    warn_line = f"\n⚠️ <b>{scfg['label']} — 流動性偏低，訊號僅供參考，慎用大倉</b>" if scfg["warn"] else ""
     return (
-        f"🚨 <b>最穩上升趨勢訊號</b> — {sig['ticker']} {sig['timeframe']}\n\n"
+        f"{scfg['emoji']} <b>最穩上升趨勢訊號</b> — {sig['ticker']} {sig['timeframe']}"
+        f"  [{scfg['label']}]{warn_line}\n\n"
         f"{cond_lines}\n\n"
         f"{bar}  強度 {sig['score']}/{sig['max_score']}\n"
         f"📊 趨勢持續 {sig['duration']} 根K線\n\n"
@@ -222,7 +255,7 @@ def build_telegram_message(sig):
         f"🎯 <b>目標二：</b>${sig['t2']:.2f}（+{sig['up2']:.1f}%）\n"
         f"🔴 <b>止損價：</b>${sig['stop']:.2f}（-{sig['risk_pct']:.1f}%）\n"
         f"📐 <b>風險回報：</b>{sig['rrr']}\n\n"
-        f"🕐 {sig['time']}"
+        f"🕐 {sig['time']} ET"
     )
 
 
@@ -326,7 +359,8 @@ def check_signals(df, enabled_conditions, dynamic_stop, market_ok):
         "up2":        (t2 - entry) / entry * 100,
         "risk_pct":   (entry - stop) / entry * 100,
         "rrr":        f"1 : {(t1 - entry) / risk:.1f}",
-        "time":       datetime.now(ZoneInfo("Europe/London")).strftime("%H:%M:%S"),
+        "time":       datetime.now(ET).strftime("%H:%M:%S"),
+        "session":    get_session(datetime.now(ET)),
         "df":         df,
     }
 
@@ -425,6 +459,24 @@ def render_signal_card(ticker, timeframe, sig):
     tf_border = "#c0dd97" if strength >= 1.0 else "#fac775"
     live_col  = "#639922" if strength >= 1.0 else "#ba7517"
 
+    # session badge
+    sess     = sig.get("session", "regular")
+    scfg     = SESSION_CONFIG[sess]
+    sess_html = (
+        f'<span style="font-size:11px;background:{scfg["bg"]};'
+        f'border:0.5px solid {scfg["border"]};color:{scfg["color"]};'
+        f'border-radius:4px;padding:2px 7px;margin-left:6px">'
+        f'{scfg["emoji"]} {scfg["label"]}</span>'
+    )
+    warn_html = ""
+    if scfg["warn"]:
+        warn_html = (
+            f'<div style="margin-top:6px;font-size:11px;background:#faeeda;'
+            f'border:0.5px solid #fac775;border-radius:5px;padding:4px 10px;'
+            f'color:#633806;display:inline-block">'
+            f'⚠️ {scfg["label"]} — 流動性偏低，訊號僅供參考，慎用大倉</div>'
+        )
+
     cond_html = "".join(
         f'<span class="ct-{"pass" if sig["conditions"][i] else "fail"}">'
         f'{"✓" if sig["conditions"][i] else "✗"} {COND_SHORT[i]}</span>'
@@ -433,19 +485,23 @@ def render_signal_card(ticker, timeframe, sig):
 
     st.markdown(f"""
     <div class="sig-card {border_cls}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
         <div>
-          <span style="font-size:20px;font-weight:600;color:#2c2c2a;{MONO}">{ticker}</span>
-          <span style="font-size:11px;background:{tf_bg};border:0.5px solid {tf_border};
-                       color:{tf_color};border-radius:4px;padding:2px 8px;margin-left:8px;{MONO}">{timeframe}</span>
-          <span style="font-size:10px;color:{live_col};margin-left:6px">● LIVE</span>
-          <div style="font-size:11px;color:#b4b2a9;margin-top:4px">
-            訊號時間 <span style="{MONO}">{sig['time']}</span>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+            <span style="font-size:20px;font-weight:600;color:#2c2c2a;{MONO}">{ticker}</span>
+            <span style="font-size:11px;background:{tf_bg};border:0.5px solid {tf_border};
+                         color:{tf_color};border-radius:4px;padding:2px 8px;{MONO}">{timeframe}</span>
+            <span style="font-size:10px;color:{live_col}">● LIVE</span>
+            {sess_html}
+          </div>
+          <div style="font-size:11px;color:#b4b2a9;margin-top:5px">
+            訊號時間 <span style="{MONO}">{sig['time']} ET</span>
             &nbsp;·&nbsp; 趨勢持續
             <span style="color:#854f0b;font-weight:500">{sig['duration']}</span> 根K線
           </div>
+          {warn_html}
         </div>
-        <div style="text-align:right">
+        <div style="text-align:right;flex-shrink:0;margin-left:12px">
           <div style="font-size:15px;letter-spacing:1px">{score_dots}</div>
           <div style="font-size:10px;color:#b4b2a9;margin-top:3px">強度 {score}/{max_s}</div>
         </div>
@@ -585,9 +641,15 @@ with st.sidebar:
     tg_token, tg_chat = get_telegram_creds(manual_token, manual_chat)
 
     if tg_enabled:
-        cooldown_min = st.slider("通知冷卻（分鐘）", 1, 60, 15)
+        cooldown_min       = st.slider("通知冷卻（分鐘）", 1, 60, 15)
+        tg_overnight       = st.checkbox("🌙 隔夜時段發送通知", value=False)
+        tg_premarket       = st.checkbox("🌅 盤前時段發送通知", value=True)
+        tg_afterhours      = st.checkbox("🌆 盤後時段發送通知", value=True)
     else:
-        cooldown_min = 15
+        cooldown_min  = 15
+        tg_overnight  = False
+        tg_premarket  = True
+        tg_afterhours = True
 
     if st.button("📤 測試 Telegram"):
         ok = send_telegram_text(tg_token, tg_chat,
@@ -608,6 +670,13 @@ with st.sidebar:
 #  MAIN
 # ═════════════════════════════════════════════
 london_now = datetime.now(ZoneInfo("Europe/London"))
+et_now     = datetime.now(ET)
+cur_session = get_session(et_now)
+scfg        = SESSION_CONFIG[cur_session]
+
+# ── auto-restrict timeframes for non-regular hours ──
+effective_tfs = get_allowed_tfs(cur_session, selected_tfs)
+tfs_restricted = (cur_session != "regular" and effective_tfs != selected_tfs)
 
 # header
 col_h1, col_h2 = st.columns([3, 1])
@@ -618,7 +687,7 @@ with col_h1:
         unsafe_allow_html=True,
     )
     tf_html = "".join(
-        f'<span class="tf-badge-{"on" if tf in selected_tfs else "off"}">{tf}</span>'
+        f'<span class="tf-badge-{"on" if tf in effective_tfs else "off"}">{tf}</span>'
         for tf in ["1m","5m","15m","1h","1d"]
     )
     st.markdown(
@@ -632,13 +701,27 @@ with col_h1:
 with col_h2:
     st.markdown(
         f'<div style="text-align:right">'
-        f'<div style="font-size:22px;font-weight:600;color:#2c2c2a;{MONO}">'
-        f'{london_now.strftime("%H:%M:%S")}</div>'
-        f'<div style="font-size:10px;color:#b4b2a9;margin-top:2px">LONDON TIME</div>'
+        f'<div style="font-size:20px;font-weight:600;color:#2c2c2a;{MONO}">'
+        f'{et_now.strftime("%H:%M:%S")}</div>'
+        f'<div style="font-size:10px;color:#b4b2a9;margin-top:1px">ET &nbsp;|&nbsp; '
+        f'{london_now.strftime("%H:%M")} LON</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
 
+st.divider()
+
+# ── session banner ──
+warn_extra = " — 流動性偏低，訊號僅供參考，慎用大倉" if scfg["warn"] else " — 正常交易時段"
+tf_note    = f"　·　已自動限制週期為 {', '.join(effective_tfs)}" if tfs_restricted else ""
+st.markdown(
+    f'<div style="background:{scfg["bg"]};border:0.5px solid {scfg["border"]};'
+    f'border-radius:8px;padding:10px 16px;margin-bottom:4px;'
+    f'font-size:13px;color:{scfg["color"]};font-weight:500">'
+    f'{scfg["emoji"]} {scfg["label"]}{warn_extra}{tf_note}'
+    f'</div>',
+    unsafe_allow_html=True,
+)
 st.divider()
 
 # market filter
@@ -657,7 +740,7 @@ else:
     mkt_ok = True
 
 # scan
-scan_pairs   = [(t, tf) for t in stocks for tf in selected_tfs]
+scan_pairs   = [(t, tf) for t in stocks for tf in effective_tfs]
 total_pairs  = len(scan_pairs)
 live_signals = []
 
@@ -675,7 +758,16 @@ for idx, (ticker, tf) in enumerate(scan_pairs):
     sig["ticker"]    = ticker
     sig["timeframe"] = tf
 
-    if tg_enabled:
+    # session-aware Telegram gate
+    sess = sig.get("session", "regular")
+    tg_session_ok = {
+        "overnight":  tg_overnight,
+        "premarket":  tg_premarket,
+        "regular":    True,
+        "afterhours": tg_afterhours,
+    }.get(sess, True)
+
+    if tg_enabled and tg_session_ok:
         key       = dedup_key(ticker, tf)
         last_sent = st.session_state.notified.get(key, 0)
         now_ts    = time.time()
@@ -691,9 +783,13 @@ for idx, (ticker, tf) in enumerate(scan_pairs):
                 send_telegram_text(tg_token, tg_chat, msg)
             st.session_state.notified[key] = now_ts
             st.session_state.signal_log.insert(0, {
-                "time": sig["time"], "ticker": ticker, "tf": tf,
-                "score": sig["score"], "max_score": sig["max_score"],
-                "entry": sig["entry"],
+                "time":      sig["time"],
+                "ticker":    ticker,
+                "tf":        tf,
+                "score":     sig["score"],
+                "max_score": sig["max_score"],
+                "entry":     sig["entry"],
+                "session":   sess,
             })
 
     live_signals.append(sig)
@@ -738,10 +834,12 @@ if st.session_state.signal_log:
         unsafe_allow_html=True,
     )
     for entry in st.session_state.signal_log[:10]:
-        dots = "🟢" * entry["score"] + "⚫" * (entry.get("max_score", 5) - entry["score"])
+        dots      = "🟢" * entry["score"] + "⚫" * (entry.get("max_score", 5) - entry["score"])
+        sess_emoji = SESSION_CONFIG.get(entry.get("session","regular"), {}).get("emoji","📈")
         st.markdown(f"""
         <div class="log-row">
           <span style="color:#b4b2a9;min-width:56px">{entry['time']}</span>
+          <span style="min-width:18px">{sess_emoji}</span>
           <span style="color:#3b6d11;font-weight:500;min-width:44px">{entry['ticker']}</span>
           <span style="color:#854f0b;min-width:30px">{entry['tf']}</span>
           <span style="color:#5f5e5a">入場 ${entry['entry']:.2f}</span>
@@ -752,7 +850,8 @@ if st.session_state.signal_log:
 # footer
 st.markdown(
     f'<div class="scan-footer">'
-    f'最後掃描：{london_now.strftime("%Y-%m-%d %H:%M:%S")} London'
+    f'最後掃描：{et_now.strftime("%Y-%m-%d %H:%M:%S")} ET'
+    f'&nbsp;·&nbsp;{london_now.strftime("%H:%M")} LON'
     f'&nbsp;·&nbsp; 下次刷新 {refresh_sec}s 後'
     f'</div>',
     unsafe_allow_html=True,
