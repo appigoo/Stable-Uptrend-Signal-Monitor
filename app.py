@@ -280,8 +280,14 @@ def calc_indicators(df):
 
 
 # ─────────────────────────────────────────────
-# DATA FETCH
+# DATA FETCH  —  4-Layer Extended Hours Strategy
 # ─────────────────────────────────────────────
+# Layer 1: yfinance fast_info        (pre_market_price / post_market_price)
+# Layer 2: yfinance history prepost  (最新1d K線含盤前/盤後)
+# Layer 3: Yahoo JSON API            (query1 / query2)
+# Layer 4: Yahoo HTML fallback       (fin-streamer tag parse)
+# K線數據永遠用 yfinance history，只有「入場價」用最新即時報價覆蓋
+
 TF_MAP = {
     "1m":  ("7d",   "1m"),
     "5m":  ("60d",  "5m"),
@@ -290,12 +296,140 @@ TF_MAP = {
     "1d":  ("5y",   "1d"),
 }
 
+def _safe_float(v):
+    try:
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
+
+@st.cache_data(ttl=20, show_spinner=False)
+def get_realtime_price(ticker: str) -> dict:
+    """
+    4-layer strategy to get the most current price including extended hours.
+    Returns: {price, regular_price, pre_price, post_price, source, staleness_sec}
+    """
+    result = {
+        "price": None, "regular_price": None,
+        "pre_price": None, "post_price": None,
+        "source": "unknown", "staleness_sec": None,
+    }
+
+    # ── Layer 1: fast_info (no extra HTTP, internal yfinance session) ──
+    try:
+        tk = yf.Ticker(ticker)
+        fi = tk.fast_info
+        reg  = _safe_float(getattr(fi, "previous_close",    None)) or \
+               _safe_float(getattr(fi, "last_price",         None))
+        pre  = _safe_float(getattr(fi, "pre_market_price",  None))
+        post = _safe_float(getattr(fi, "post_market_price", None))
+        if reg and reg > 0:
+            result["regular_price"] = reg
+            anchor = reg
+            if pre  and (anchor * 0.70 <= pre  <= anchor * 1.30):
+                result["pre_price"]  = pre
+            if post and (anchor * 0.70 <= post <= anchor * 1.30):
+                result["post_price"] = post
+            result["price"]  = (result["pre_price"] or
+                                result["post_price"] or reg)
+            result["source"] = "fast_info"
+            if result["pre_price"] or result["post_price"]:
+                return result          # 有即時延伸時段價，直接返回
+    except Exception:
+        pass
+
+    # ── Layer 2: history prepost=True (pull latest 1-day 1m bar) ──
+    try:
+        tk  = yf.Ticker(ticker)
+        df2 = tk.history(period="1d", interval="1m", prepost=True)
+        if not df2.empty:
+            if isinstance(df2.columns, pd.MultiIndex):
+                df2.columns = df2.columns.get_level_values(0)
+            last_row  = df2.iloc[-1]
+            last_price = _safe_float(last_row.get("Close"))
+            reg = result.get("regular_price") or _safe_float(
+                df2[df2.index.time < __import__("datetime").time(9, 30)]["Close"].iloc[-1]
+                if len(df2) > 1 else None
+            )
+            if last_price and last_price > 0:
+                if reg and (reg * 0.70 <= last_price <= reg * 1.30):
+                    result["price"]  = last_price
+                    result["source"] = "history_prepost"
+                    # staleness = seconds since last bar
+                    try:
+                        import datetime as _dt
+                        last_ts = df2.index[-1]
+                        if hasattr(last_ts, "tzinfo") and last_ts.tzinfo:
+                            now_ts = _dt.datetime.now(last_ts.tzinfo)
+                        else:
+                            now_ts = _dt.datetime.now()
+                        result["staleness_sec"] = int((now_ts - last_ts).total_seconds())
+                    except Exception:
+                        pass
+                    return result
+    except Exception:
+        pass
+
+    # ── Layer 3: Yahoo Finance JSON API ──
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&range=1d&includePrePost=true"
+        r   = requests.get(url, headers=headers, timeout=8)
+        if r.ok:
+            data = r.json()
+            meta = data["chart"]["result"][0]["meta"]
+            price = _safe_float(meta.get("regularMarketPrice"))
+            pre   = _safe_float(meta.get("preMarketPrice"))
+            post  = _safe_float(meta.get("postMarketPrice"))
+            reg   = _safe_float(meta.get("previousClose")) or price
+            if reg and reg > 0:
+                result["regular_price"] = reg
+                if pre  and (reg * 0.70 <= pre  <= reg * 1.30):
+                    result["pre_price"]  = pre
+                if post and (reg * 0.70 <= post <= reg * 1.30):
+                    result["post_price"] = post
+                result["price"]  = (result["pre_price"] or
+                                    result["post_price"] or price or reg)
+                result["source"] = "yahoo_json"
+                return result
+    except Exception:
+        pass
+
+    # ── Layer 4: Yahoo HTML fallback ──
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        r = requests.get(f"https://finance.yahoo.com/quote/{ticker}",
+                         headers=headers, timeout=10)
+        if r.ok:
+            import re
+            prices = re.findall(
+                r'data-field="regularMarketPrice"[^>]*data-value="([0-9.]+)"', r.text
+            )
+            pre_prices = re.findall(
+                r'data-field="preMarketPrice"[^>]*data-value="([0-9.]+)"', r.text
+            )
+            if prices:
+                reg = _safe_float(prices[0])
+                pre = _safe_float(pre_prices[0]) if pre_prices else None
+                if reg and reg > 0:
+                    result["regular_price"] = reg
+                    if pre and (reg * 0.70 <= pre <= reg * 1.30):
+                        result["pre_price"] = pre
+                    result["price"]  = result["pre_price"] or reg
+                    result["source"] = "yahoo_html"
+                    return result
+    except Exception:
+        pass
+
+    return result
+
+
 @st.cache_data(ttl=25, show_spinner=False)
 def fetch_data(ticker, timeframe):
+    """Fetch OHLCV + indicators. Entry price is overridden by get_realtime_price()."""
     period, interval = TF_MAP[timeframe]
     try:
         df = yf.download(ticker, period=period, interval=interval,
-                         auto_adjust=True, progress=False)
+                         auto_adjust=True, progress=False, prepost=True)
         if df.empty:
             return None
         if isinstance(df.columns, pd.MultiIndex):
@@ -346,22 +480,24 @@ def check_signals(df, enabled_conditions, dynamic_stop, market_ok):
     t2    = entry + risk * 4.0
 
     return {
-        "conditions": raw,
-        "enabled":    enabled_conditions[:],
-        "score":      score,
-        "max_score":  max_score,
-        "duration":   duration,
-        "entry":      entry,
-        "t1":         t1,
-        "t2":         t2,
-        "stop":       stop,
-        "up1":        (t1 - entry) / entry * 100,
-        "up2":        (t2 - entry) / entry * 100,
-        "risk_pct":   (entry - stop) / entry * 100,
-        "rrr":        f"1 : {(t1 - entry) / risk:.1f}",
-        "time":       datetime.now(ET).strftime("%H:%M:%S"),
-        "session":    get_session(datetime.now(ET)),
-        "df":         df,
+        "conditions":  raw,
+        "enabled":     enabled_conditions[:],
+        "score":       score,
+        "max_score":   max_score,
+        "duration":    duration,
+        "entry":       entry,       # will be overridden by realtime price in main loop
+        "t1":          t1,
+        "t2":          t2,
+        "stop":        stop,
+        "up1":         (t1 - entry) / entry * 100,
+        "up2":         (t2 - entry) / entry * 100,
+        "risk_pct":    (entry - stop) / entry * 100,
+        "rrr":         f"1 : {(t1 - entry) / risk:.1f}",
+        "time":        datetime.now(ET).strftime("%H:%M:%S"),
+        "session":     get_session(datetime.now(ET)),
+        "price_source": "yfinance_kline",
+        "staleness":   None,
+        "df":          df,
     }
 
 
@@ -498,6 +634,8 @@ def render_signal_card(ticker, timeframe, sig):
             訊號時間 <span style="{MONO}">{sig['time']} ET</span>
             &nbsp;·&nbsp; 趨勢持續
             <span style="color:#854f0b;font-weight:500">{sig['duration']}</span> 根K線
+            &nbsp;·&nbsp; 報價來源：<span style="color:#639922;font-weight:500">{sig.get('price_source','—')}</span>
+            {f'&nbsp;·&nbsp; <span style="color:#a32d2d">延遲 {sig["staleness"]}s</span>' if sig.get('staleness') and sig['staleness'] > 30 else ''}
           </div>
           {warn_html}
         </div>
@@ -757,6 +895,22 @@ for idx, (ticker, tf) in enumerate(scan_pairs):
 
     sig["ticker"]    = ticker
     sig["timeframe"] = tf
+
+    # ── 用即時報價覆蓋入場價（4層策略）──
+    rt = get_realtime_price(ticker)
+    if rt["price"] and rt["price"] > 0:
+        new_entry = rt["price"]
+        stop      = sig["stop"]  # EMA20 止損不變
+        risk      = max(new_entry - stop, new_entry * 0.005)
+        sig["entry"]        = new_entry
+        sig["t1"]           = new_entry + risk * 2.5
+        sig["t2"]           = new_entry + risk * 4.0
+        sig["up1"]          = (sig["t1"] - new_entry) / new_entry * 100
+        sig["up2"]          = (sig["t2"] - new_entry) / new_entry * 100
+        sig["risk_pct"]     = (new_entry - stop) / new_entry * 100
+        sig["rrr"]          = f"1 : {(sig['t1'] - new_entry) / risk:.1f}"
+        sig["price_source"] = rt["source"]
+        sig["staleness"]    = rt.get("staleness_sec")
 
     # session-aware Telegram gate
     sess = sig.get("session", "regular")
