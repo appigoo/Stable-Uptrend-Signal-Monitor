@@ -29,120 +29,164 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# CUSTOM CSS
+# CUSTOM CSS  — light cream theme
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+/* ── global ── */
 html, body, [class*="css"] {
-    font-family: 'JetBrains Mono', monospace;
-    background-color: #06060f;
-    color: #e0e0f0;
+    font-family: 'Inter', sans-serif;
+    background-color: #f5f2eb;
+    color: #2c2c2a;
 }
-.main { background-color: #06060f; }
-section[data-testid="stSidebar"] {
-    background-color: #080812 !important;
-    border-right: 1px solid #1a1a2e;
+.main .block-container {
+    background-color: #f5f2eb;
+    padding-top: 1.5rem;
 }
-section[data-testid="stSidebar"] * { font-family: 'JetBrains Mono', monospace !important; }
 
-.signal-card {
-    background: linear-gradient(135deg, #0e0e1a 0%, #141428 100%);
-    border: 1px solid #00e5a020;
-    border-radius: 12px;
-    padding: 18px 20px;
-    margin-bottom: 14px;
+/* ── sidebar ── */
+section[data-testid="stSidebar"] {
+    background-color: #ffffff !important;
+    border-right: 0.5px solid #ddd8ce !important;
 }
-.signal-card-warn {
-    border-left: 3px solid #f5c518;
+section[data-testid="stSidebar"] * {
+    font-family: 'Inter', sans-serif !important;
+    color: #2c2c2a !important;
+}
+section[data-testid="stSidebar"] .stMarkdown p {
+    font-size: 12px;
+    color: #5f5e5a !important;
+}
+
+/* ── signal card ── */
+.signal-card {
+    background: #ffffff;
+    border: 0.5px solid #ddd8ce;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
 }
 .signal-card-strong {
-    border-left: 3px solid #00e5a0;
+    border-left: 3px solid #3b6d11;
 }
+.signal-card-warn {
+    border-left: 3px solid #ba7517;
+}
+
+/* ── price boxes inside card ── */
 .metric-box {
-    background: #0a0a18;
-    border-radius: 8px;
-    padding: 12px 16px;
-    text-align: center;
+    background: #faf8f4;
+    border: 0.5px solid #e8e4db;
+    border-radius: 7px;
+    padding: 10px 12px;
+    text-align: left;
 }
-.log-bar {
-    background: #040408;
-    border-top: 1px solid #1a1a2e;
-    padding: 8px 16px;
-    font-size: 11px;
-    color: #444;
-    font-family: 'JetBrains Mono', monospace;
-}
+
+/* ── condition tags ── */
 .tag-green {
-    background: #00e5a015;
-    border: 1px solid #00e5a040;
-    color: #00e5a0;
+    background: #eaf3de;
+    border: 0.5px solid #c0dd97;
+    color: #3b6d11;
     border-radius: 4px;
     padding: 2px 7px;
     font-size: 11px;
     margin-right: 4px;
 }
 .tag-yellow {
-    background: #f5c51815;
-    border: 1px solid #f5c51840;
-    color: #f5c518;
+    background: #faeeda;
+    border: 0.5px solid #fac775;
+    color: #633806;
     border-radius: 4px;
     padding: 2px 7px;
     font-size: 11px;
     margin-right: 4px;
 }
 .tag-red {
-    background: #ff4d6d15;
-    border: 1px solid #ff4d6d40;
-    color: #ff4d6d;
+    background: #fcebeb;
+    border: 0.5px solid #f7c1c1;
+    color: #a32d2d;
     border-radius: 4px;
     padding: 2px 7px;
     font-size: 11px;
     margin-right: 4px;
 }
 .tag-blue {
-    background: #7ec8e315;
-    border: 1px solid #7ec8e340;
-    color: #7ec8e3;
+    background: #e6f1fb;
+    border: 0.5px solid #b5d4f4;
+    color: #0c447c;
     border-radius: 4px;
     padding: 2px 7px;
     font-size: 11px;
     margin-right: 4px;
 }
+
+/* ── st.metric cards ── */
 div[data-testid="stMetric"] {
-    background: #0a0a18;
-    border: 1px solid #1a1a2e;
-    border-radius: 8px;
-    padding: 12px;
+    background: #ffffff;
+    border: 0.5px solid #ddd8ce;
+    border-radius: 10px;
+    padding: 14px 16px;
 }
-div[data-testid="stMetric"] label { color: #555 !important; font-size: 11px !important; }
+div[data-testid="stMetric"] label {
+    color: #888780 !important;
+    font-size: 11px !important;
+    font-weight: 400 !important;
+}
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-    color: #00e5a0 !important;
+    color: #2c2c2a !important;
     font-size: 22px !important;
-    font-weight: 800 !important;
+    font-weight: 600 !important;
 }
+
+/* ── buttons ── */
 .stButton>button {
-    background: #0e0e1a;
-    border: 1px solid #00e5a040;
-    color: #00e5a0;
+    background: #faf8f4;
+    border: 0.5px solid #ddd8ce;
+    color: #5f5e5a;
     border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', sans-serif;
     font-size: 12px;
+    font-weight: 500;
 }
 .stButton>button:hover {
-    background: #00e5a015;
-    border-color: #00e5a0;
+    background: #eaf3de;
+    border-color: #c0dd97;
+    color: #3b6d11;
 }
+
+/* ── text inputs ── */
 .stTextInput>div>div>input {
-    background: #0e0e1a !important;
-    border: 1px solid #1a1a2e !important;
-    color: #e0e0f0 !important;
+    background: #faf8f4 !important;
+    border: 0.5px solid #ddd8ce !important;
+    color: #2c2c2a !important;
     border-radius: 6px !important;
     font-family: 'JetBrains Mono', monospace !important;
+    font-size: 12px !important;
 }
-.stSlider .stSlider { color: #00e5a0; }
-hr { border-color: #1a1a2e !important; }
+
+/* ── checkbox accent ── */
+.stCheckbox span { color: #5f5e5a !important; font-size: 13px !important; }
+input[type=checkbox] { accent-color: #639922 !important; }
+
+/* ── slider accent ── */
+.stSlider div[data-baseweb="slider"] div { background: #639922 !important; }
+
+/* ── progress bar ── */
+.stProgress > div > div { background: #639922 !important; }
+
+/* ── success / info banners ── */
+.stSuccess { background: #eaf3de !important; color: #3b6d11 !important; border-radius: 7px !important; }
+
+/* ── divider ── */
+hr { border-color: #e8e4db !important; }
+
+/* ── captions ── */
+.stCaption, small { color: #b4b2a9 !important; font-size: 11px !important; }
+
+/* ── headings in main area ── */
+h1, h2, h3 { color: #2c2c2a !important; font-weight: 600 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -393,13 +437,13 @@ def make_chart_bytes(df, ticker, timeframe, sig):
         plot_df = df.tail(80).copy()
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7),
                                         gridspec_kw={"height_ratios": [3, 1]},
-                                        facecolor="#06060f")
-        ax1.set_facecolor("#0e0e1a")
-        ax2.set_facecolor("#0e0e1a")
+                                        facecolor="#f5f2eb")
+        ax1.set_facecolor("#ffffff")
+        ax2.set_facecolor("#ffffff")
 
         x = range(len(plot_df))
         for i, (idx, row) in enumerate(plot_df.iterrows()):
-            color = "#00e5a0" if row["Close"] >= row["Open"] else "#ff4d6d"
+            color = "#3b6d11" if row["Close"] >= row["Open"] else "#a32d2d"
             ax1.plot([i, i], [row["Low"], row["High"]], color=color, linewidth=0.8)
             ax1.bar(i, abs(row["Close"] - row["Open"]),
                     bottom=min(row["Open"], row["Close"]),
@@ -411,23 +455,23 @@ def make_chart_bytes(df, ticker, timeframe, sig):
             ax1.plot(x, plot_df[ema].values, color=col, linewidth=lw, alpha=0.85)
 
         # entry / target / stop lines
-        ax1.axhline(sig["entry"], color="#7ec8e3", linewidth=1.2, linestyle="--", alpha=0.8)
-        ax1.axhline(sig["t1"],    color="#00e5a0", linewidth=1.2, linestyle="--", alpha=0.8)
-        ax1.axhline(sig["stop"],  color="#ff4d6d", linewidth=1.2, linestyle="--", alpha=0.8)
+        ax1.axhline(sig["entry"], color="#185fa5", linewidth=1.2, linestyle="--", alpha=0.8)
+        ax1.axhline(sig["t1"],    color="#3b6d11", linewidth=1.2, linestyle="--", alpha=0.8)
+        ax1.axhline(sig["stop"],  color="#a32d2d", linewidth=1.2, linestyle="--", alpha=0.8)
 
         ax1.set_title(f"{ticker} {timeframe}  —  最穩上升趨勢訊號",
-                      color="#e0e0f0", fontsize=13, pad=10)
-        ax1.tick_params(colors="#444"); ax1.spines[:].set_color("#1a1a2e")
+                      color="#2c2c2a", fontsize=13, pad=10)
+        ax1.tick_params(colors="#888780"); ax1.spines[:].set_color("#e8e4db")
 
         # volume
-        colors_v = ["#00e5a0" if r["Close"] >= r["Open"] else "#ff4d6d"
+        colors_v = ["#3b6d11" if r["Close"] >= r["Open"] else "#a32d2d"
                     for _, r in plot_df.iterrows()]
         ax2.bar(x, plot_df["Volume"].values, color=colors_v, alpha=0.7, width=0.6)
-        ax2.tick_params(colors="#444"); ax2.spines[:].set_color("#1a1a2e")
+        ax2.tick_params(colors="#888780"); ax2.spines[:].set_color("#e8e4db")
 
         plt.tight_layout(pad=1.5)
         buf = io.BytesIO()
-        plt.savefig(buf, format="png", dpi=120, facecolor="#06060f")
+        plt.savefig(buf, format="png", dpi=120, facecolor="#f5f2eb")
         plt.close(fig)
         buf.seek(0)
         return buf.read()
@@ -489,46 +533,47 @@ def render_signal_card(ticker, timeframe, sig):
     <div class="signal-card {border}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <div>
-          <span style="font-size:22px;font-weight:900;color:#fff">{ticker}</span>
-          <span class="tag-green" style="margin-left:8px">{timeframe}</span>
-          <span style="font-size:10px;color:#00e5a0;margin-left:6px">● LIVE</span>
-          <div style="font-size:11px;color:#555;margin-top:4px">
+          <span style="font-size:20px;font-weight:600;color:#2c2c2a;font-family:'JetBrains Mono',monospace">{ticker}</span>
+          <span class="tag-green" style="margin-left:8px;font-family:'JetBrains Mono',monospace">{timeframe}</span>
+          <span style="font-size:10px;color:#639922;margin-left:6px">● LIVE</span>
+          <div style="font-size:11px;color:#b4b2a9;margin-top:4px">
             訊號時間 {sig['time']}
-            {'&nbsp;&nbsp;·&nbsp;&nbsp;趨勢持續 <b style="color:#f5c518">' + str(sig['duration']) + '</b> 根K線' if True else ''}
+            {'&nbsp;&nbsp;·&nbsp;&nbsp;趨勢持續 <b style="color:#854f0b">' + str(sig['duration']) + '</b> 根K線' if True else ''}
           </div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:16px">{score_dots}</div>
-          <div style="font-size:10px;color:#555;margin-top:4px">強度 {score}/{max_s}</div>
+          <div style="font-size:15px">{score_dots}</div>
+          <div style="font-size:10px;color:#b4b2a9;margin-top:3px">強度 {score}/{max_s}</div>
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
-        <div class="metric-box" style="border:1px solid #7ec8e320">
-          <div style="font-size:9px;color:#444;margin-bottom:4px">入場價</div>
-          <div style="font-size:15px;font-weight:800;color:#7ec8e3">${sig['entry']:.2f}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+        <div class="metric-box">
+          <div style="font-size:9px;color:#b4b2a9;margin-bottom:3px">入場價</div>
+          <div style="font-size:14px;font-weight:500;color:#185fa5;font-family:'JetBrains Mono',monospace">${sig['entry']:.2f}</div>
         </div>
-        <div class="metric-box" style="border:1px solid #00e5a020">
-          <div style="font-size:9px;color:#444;margin-bottom:4px">目標一</div>
-          <div style="font-size:15px;font-weight:800;color:#00e5a0">${sig['t1']:.2f}</div>
-          <div style="font-size:10px;color:#00e5a080">+{sig['up1']:.1f}%</div>
+        <div class="metric-box">
+          <div style="font-size:9px;color:#b4b2a9;margin-bottom:3px">目標一</div>
+          <div style="font-size:14px;font-weight:500;color:#3b6d11;font-family:'JetBrains Mono',monospace">${sig['t1']:.2f}</div>
+          <div style="font-size:10px;color:#639922">+{sig['up1']:.1f}%</div>
         </div>
-        <div class="metric-box" style="border:1px solid #00e5a010">
-          <div style="font-size:9px;color:#444;margin-bottom:4px">目標二</div>
-          <div style="font-size:15px;font-weight:800;color:#00c070">${sig['t2']:.2f}</div>
-          <div style="font-size:10px;color:#00c07080">+{sig['up2']:.1f}%</div>
+        <div class="metric-box">
+          <div style="font-size:9px;color:#b4b2a9;margin-bottom:3px">目標二</div>
+          <div style="font-size:14px;font-weight:500;color:#639922;font-family:'JetBrains Mono',monospace">${sig['t2']:.2f}</div>
+          <div style="font-size:10px;color:#97c459">+{sig['up2']:.1f}%</div>
         </div>
-        <div class="metric-box" style="border:1px solid #ff4d6d20">
-          <div style="font-size:9px;color:#444;margin-bottom:4px">止損</div>
-          <div style="font-size:15px;font-weight:800;color:#ff4d6d">${sig['stop']:.2f}</div>
-          <div style="font-size:10px;color:#ff4d6d80">-{sig['risk_pct']:.1f}%</div>
+        <div class="metric-box">
+          <div style="font-size:9px;color:#b4b2a9;margin-bottom:3px">止損</div>
+          <div style="font-size:14px;font-weight:500;color:#a32d2d;font-family:'JetBrains Mono',monospace">${sig['stop']:.2f}</div>
+          <div style="font-size:10px;color:#d85a30">-{sig['risk_pct']:.1f}%</div>
         </div>
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>{cond_html}</div>
-        <div style="font-size:12px;font-weight:700;color:#f5c518;background:#f5c51815;
-                    border:1px solid #f5c51840;border-radius:6px;padding:4px 12px">
+        <div style="font-size:11px;font-weight:500;color:#633806;background:#faeeda;
+                    border:0.5px solid #fac775;border-radius:5px;padding:4px 10px;
+                    font-family:'JetBrains Mono',monospace;white-space:nowrap">
           RRR {sig['rrr']}
         </div>
       </div>
@@ -540,8 +585,8 @@ def render_signal_card(ticker, timeframe, sig):
 # ════════════════  SIDEBAR  ═════════════════
 # ─────────────────────────────────────────────
 with st.sidebar:
-    st.markdown('<div style="font-size:18px;font-weight:900;color:#00e5a0;letter-spacing:-1px">最穩訊號</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:9px;color:#333;letter-spacing:3px;margin-bottom:12px">SIGNAL MONITOR</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:18px;font-weight:600;color:#2c2c2a;letter-spacing:-0.5px">最穩訊號</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:9px;color:#b4b2a9;letter-spacing:3px;margin-bottom:12px">SIGNAL MONITOR</div>', unsafe_allow_html=True)
     st.divider()
 
     # ── stocks ──
@@ -674,11 +719,11 @@ with st.sidebar:
 # ── header ──
 col_h1, col_h2 = st.columns([3, 1])
 with col_h1:
-    st.markdown('<h2 style="color:#e0e0f0;font-weight:900;margin:0">最穩上升趨勢 入場訊號系統</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="color:#2c2c2a;font-weight:600;margin:0">最穩上升趨勢 入場訊號系統</h2>', unsafe_allow_html=True)
     st.caption(f"監控中：{', '.join(stocks)}　週期：{', '.join(selected_tfs)}　刷新：{refresh_sec}s")
 with col_h2:
     london_time = datetime.now(ZoneInfo("Europe/London")).strftime("%H:%M:%S")
-    st.markdown(f'<div style="text-align:right;font-size:20px;color:#00e5a0;font-weight:800">{london_time}<br><span style="font-size:10px;color:#444">LONDON TIME</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:right;font-size:20px;color:#2c2c2a;font-weight:600;font-family:\'JetBrains Mono\',monospace">{london_time}<br><span style="font-size:10px;color:#b4b2a9;font-family:\'Inter\',sans-serif">LONDON TIME</span></div>', unsafe_allow_html=True)
 
 st.divider()
 
@@ -758,32 +803,32 @@ st.divider()
 
 # ── signal cards ──
 if live_signals:
-    st.markdown(f'<div style="font-size:10px;color:#333;letter-spacing:2px;margin-bottom:14px">LIVE SIGNALS — {len(live_signals)} 個訊號</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size:10px;color:#b4b2a9;letter-spacing:2px;margin-bottom:14px">LIVE SIGNALS — {len(live_signals)} 個訊號</div>', unsafe_allow_html=True)
     for sig in live_signals:
         render_signal_card(sig["ticker"], sig["timeframe"], sig)
 else:
     st.markdown("""
-    <div style="border:1px dashed #1a1a2e;border-radius:12px;padding:40px;text-align:center;color:#2a2a3a;margin-top:20px">
-      <div style="font-size:36px;margin-bottom:12px">◎</div>
-      <div style="font-size:13px;letter-spacing:2px">暫無訊號 — 系統持續監控中</div>
-      <div style="font-size:11px;margin-top:8px;color:#1a1a2e">條件未全數成立，等待最佳入場時機</div>
+    <div style="border:0.5px dashed #d3d1c7;border-radius:10px;padding:40px;text-align:center;color:#b4b2a9;margin-top:20px;background:#ffffff">
+      <div style="font-size:32px;margin-bottom:12px">◎</div>
+      <div style="font-size:13px;letter-spacing:1px">暫無訊號 — 系統持續監控中</div>
+      <div style="font-size:11px;margin-top:8px;color:#d3d1c7">條件未全數成立，等待最佳入場時機</div>
     </div>
     """, unsafe_allow_html=True)
 
 # ── activity log ──
 if st.session_state.signal_log:
     st.divider()
-    st.markdown('<div style="font-size:9px;color:#333;letter-spacing:2px">SIGNAL LOG</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:9px;color:#b4b2a9;letter-spacing:2px;margin-bottom:6px">SIGNAL LOG</div>', unsafe_allow_html=True)
     for entry in st.session_state.signal_log[:10]:
         col_l1, col_l2, col_l3, col_l4 = st.columns([1, 1, 1, 2])
-        col_l1.markdown(f'<span style="color:#444;font-size:11px">{entry["time"]}</span>', unsafe_allow_html=True)
-        col_l2.markdown(f'<span style="color:#00e5a0;font-size:11px">{entry["ticker"]}</span>', unsafe_allow_html=True)
-        col_l3.markdown(f'<span style="color:#f5c518;font-size:11px">{entry["tf"]}</span>', unsafe_allow_html=True)
-        col_l4.markdown(f'<span style="color:#7ec8e3;font-size:11px">入場 ${entry["entry"]:.2f}　強度 {"🟢"*entry["score"]}</span>', unsafe_allow_html=True)
+        col_l1.markdown(f'<span style="color:#b4b2a9;font-size:11px;font-family:\'JetBrains Mono\',monospace">{entry["time"]}</span>', unsafe_allow_html=True)
+        col_l2.markdown(f'<span style="color:#3b6d11;font-size:12px;font-weight:500;font-family:\'JetBrains Mono\',monospace">{entry["ticker"]}</span>', unsafe_allow_html=True)
+        col_l3.markdown(f'<span style="color:#854f0b;font-size:11px;font-family:\'JetBrains Mono\',monospace">{entry["tf"]}</span>', unsafe_allow_html=True)
+        col_l4.markdown(f'<span style="color:#5f5e5a;font-size:11px;font-family:\'JetBrains Mono\',monospace">入場 ${entry["entry"]:.2f}　強度 {"🟢"*entry["score"]}</span>', unsafe_allow_html=True)
 
 # ── last refresh + auto-refresh ──
 st.divider()
-st.markdown(f'<div style="font-size:10px;color:#333">最後掃描：{datetime.now(ZoneInfo("Europe/London")).strftime("%Y-%m-%d %H:%M:%S")} London　·　下次刷新 {refresh_sec}s 後</div>', unsafe_allow_html=True)
+st.markdown(f'<div style="font-size:10px;color:#b4b2a9">最後掃描：{datetime.now(ZoneInfo("Europe/London")).strftime("%Y-%m-%d %H:%M:%S")} London　·　下次刷新 {refresh_sec}s 後</div>', unsafe_allow_html=True)
 
 time.sleep(refresh_sec)
 st.rerun()
