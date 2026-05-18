@@ -592,7 +592,10 @@ with st.sidebar:
     if st.button("📤 測試 Telegram"):
         ok = send_telegram_text(tg_token, tg_chat,
                                 "✅ 最穩訊號系統 — Telegram 連線測試成功！")
-        st.success("發送成功 ✓") if ok else st.error("發送失敗，請檢查 Token / Chat ID")
+        if ok:
+            st.success("發送成功 ✓")
+        else:
+            st.error("發送失敗，請檢查 Token / Chat ID")
 
     st.divider()
     if st.button("🗑 清除今日記錄"):
